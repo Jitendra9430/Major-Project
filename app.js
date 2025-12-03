@@ -23,7 +23,9 @@ const listingRouter = require("./routes/listing.js");
 const reviewRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
 
-const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
+//const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
+const MONGO_URL = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/wanderlust";
+
 
 main().then(() => {
     console.log("Connected to DB");
@@ -94,10 +96,24 @@ app.all(/.*/, (req, res, next) => {
 });
 
 // Error handler
-app.use((err, req, res, next) => {
+/*app.use((err, req, res, next) => {
   let { statusCode = 500, message = "something went wrong" } = err;
   res.render("error.ejs", { message });
+});*/
+
+// safer error handler rendering the file inside listings
+app.use((err, req, res, next) => {
+  console.error(err); // always log the error (shows in Vercel logs)
+  const { statusCode = 500, message = "Something went wrong" } = err;
+  // try to render the listings/error.ejs view; fallback to plain text if missing
+  try {
+    return res.status(statusCode).render("listings/error", { message });
+  } catch (renderErr) {
+    console.error("Render failed:", renderErr);
+    return res.status(statusCode).send(`Error ${statusCode}: ${message}`);
+  }
 });
+
 
 app.listen(8080, () => {
     console.log("Server is listening on port 8080");
